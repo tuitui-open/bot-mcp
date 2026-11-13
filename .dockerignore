@@ -1,0 +1,10 @@
+# Local E2E credentials must never enter the image build context.
+.env
+.env.*
+!.env.e2e.sample
+.git
+.agents
+openspec
+bot-mcp
+bot-mcp.exe
+log/

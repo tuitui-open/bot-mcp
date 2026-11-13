@@ -6,3 +6,5 @@
 # Local build and E2E output
 bot-mcp
 bot-mcp.exe
+*.exe~
+/log/

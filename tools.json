@@ -1,0 +1,474 @@
+[
+  {
+    "name": "tuitui_add_group_members",
+    "description": "往tuitui(推推)群中添加成员",
+    "inputSchema": {
+      "properties": {
+        "group_id": {
+          "description": "群ID",
+          "type": "string"
+        },
+        "members": {
+          "description": "要加入的群成员账号列表",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "group_id"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_add_team_members",
+    "description": "往tuitui(推推)团队中添加成员",
+    "inputSchema": {
+      "properties": {
+        "members": {
+          "description": "成员用户ID字符串数组。如果仅有成员账号，需要先调用tuitui_get_user_ids将账号列表转为用户ID列表",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "team_id": {
+          "description": "团队ID",
+          "type": "string"
+        }
+      },
+      "required": [
+        "team_id"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_create_channel",
+    "description": "在tuitui(推推)团队下创建频道。返回channel_id（频道ID）",
+    "inputSchema": {
+      "properties": {
+        "desc": {
+          "description": "频道描述",
+          "type": "string"
+        },
+        "name": {
+          "description": "频道名称",
+          "minLength": 1,
+          "type": "string"
+        },
+        "team_id": {
+          "description": "团队ID",
+          "type": "string"
+        }
+      },
+      "required": [
+        "team_id",
+        "name"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_create_group",
+    "description": "创建tuitui(推推)群。返回group_id（群ID）",
+    "inputSchema": {
+      "properties": {
+        "members": {
+          "description": "群成员账号列表，包含群主",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "description": "群名称",
+          "minLength": 1,
+          "type": "string"
+        },
+        "owner": {
+          "description": "群主，如果不设置群主，默认第一个群成员是群主",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_create_team",
+    "description": "创建tuitui(推推)团队。返回team_id（团队ID）和default_channel_id（默认频道ID）",
+    "inputSchema": {
+      "properties": {
+        "desc": {
+          "description": "团队描述",
+          "type": "string"
+        },
+        "name": {
+          "description": "团队名称",
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_get_group_messages",
+    "description": "通过群ID获取tuitui(推推)某群内消息，返回服务端原始JSON",
+    "inputSchema": {
+      "properties": {
+        "group_id": {
+          "description": "群ID",
+          "type": "string"
+        },
+        "last": {
+          "description": "最新条数，默认20，允许范围由服务端决定",
+          "type": "integer",
+          "default": 20
+        }
+      },
+      "required": [
+        "group_id"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_get_private_message_readstatus",
+    "description": "查询tuitui(推推)用户是否已读我发给他的消息",
+    "inputSchema": {
+      "properties": {
+        "account": {
+          "description": "用户账号，需要填写英文的账号名，不支持中文姓名",
+          "type": "string"
+        },
+        "msgid": {
+          "description": "消息ID。必须是我发出的消息",
+          "type": "string"
+        }
+      },
+      "required": [
+        "account",
+        "msgid"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_get_private_messages",
+    "description": "查询与tuitui(推推)用户的聊天记录，返回单页服务端原始JSON，可通过cursor继续查询",
+    "inputSchema": {
+      "properties": {
+        "account": {
+          "description": "用户账号，需要填写英文的账号名，不支持中文姓名",
+          "type": "string"
+        },
+        "cursor": {
+          "description": "分页游标，首次可不传；继续查询时使用上次响应的cursor",
+          "type": "string",
+          "default": "0"
+        },
+        "relative_time": {
+          "description": "取值：'today' / 'yesterday' / 'day_before_yesterday' / 'this_week' / 'last_week'（指**上个自然周**，非最近7天） / 'this_month' / 'last_month'（指**上个自然月**，非最近30天） / 'this_year'，或动态窗口 'last_{N}_{unit}'（'unit' ∈ 'minutes'/'hours'/'days'/'months'，如 'last_5_minutes'、'last_7_days'）。\n**注意**：如果用户意图是“最近一周”、“近七天”，请使用 'last_7_days' 而不是 'last_week'；若是“最近一个月”，请使用 'last_1_months' 或 'last_30_days'，而不是 'last_month'。",
+          "type": "string",
+          "default": "today"
+        }
+      },
+      "required": [
+        "account"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_get_team_channel_list",
+    "description": "获取tuitui(推推)团队的频道列表，返回服务端原始JSON",
+    "inputSchema": {
+      "properties": {
+        "team_id": {
+          "description": "团队ID",
+          "type": "string"
+        }
+      },
+      "required": [
+        "team_id"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_get_team_post_list_by_time_interval",
+    "description": "通过起止时间获取tuitui(推推)某团队某频道下的帖子列表，每个主题（topic）帖子下会有多条回复（reply）帖子",
+    "inputSchema": {
+      "properties": {
+        "channel_id": {
+          "description": "频道ID",
+          "type": "string"
+        },
+        "end_time": {
+          "description": "终止时间，从该时间结束获取帖子列表，格式为标准unix时间戳（例如：1735660800），如果该参数为空，默认为当前时间",
+          "type": "string"
+        },
+        "start_time": {
+          "description": "起始时间，从该时间开始获取帖子列表，格式为标准unix时间戳（例如：1735660800），如果该参数为空，默认为end_time一天前",
+          "type": "string"
+        }
+      },
+      "required": [
+        "channel_id"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_get_user_ids",
+    "description": "通过用户账号批量查询tuitui(推推)用户ID，返回服务端原始JSON",
+    "inputSchema": {
+      "properties": {
+        "accounts": {
+          "description": "用户账号数组",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "accounts"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_recall_private_message",
+    "description": "撤回当前机器人发出的推推私聊消息",
+    "inputSchema": {
+      "properties": {
+        "account": {
+          "description": "用户账号，需要填写英文的账号名，不支持中文姓名",
+          "type": "string"
+        },
+        "msgid": {
+          "description": "待撤回消息的ID字符串",
+          "type": "string"
+        }
+      },
+      "required": [
+        "account",
+        "msgid"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_remove_group_members",
+    "description": "从tuitui(推推)群中移除成员",
+    "inputSchema": {
+      "properties": {
+        "group_id": {
+          "description": "群ID",
+          "type": "string"
+        },
+        "members": {
+          "description": "要移除的群成员账号列表",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "group_id"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_search_account",
+    "description": "搜索tuitui(推推)用户，返回服务端原始JSON",
+    "inputSchema": {
+      "properties": {
+        "keyword": {
+          "description": "搜索关键词，可以是姓名/拼音/域账号等",
+          "type": "string"
+        }
+      },
+      "required": [
+        "keyword"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_send_channel_markdown_message",
+    "description": "向tuitui(推推)团队的频道发送markdown格式的富文本消息",
+    "inputSchema": {
+      "properties": {
+        "channel_id": {
+          "description": "频道ID",
+          "type": "string"
+        },
+        "markdown": {
+          "description": "markdown内容",
+          "type": "string"
+        }
+      },
+      "required": [
+        "channel_id",
+        "markdown"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_send_group_image",
+    "description": "通过群ID向tuitui(推推)群发一条图片消息",
+    "inputSchema": {
+      "properties": {
+        "group_id": {
+          "description": "群ID",
+          "type": "string"
+        },
+        "url": {
+          "description": "可下载的HTTP(S)图片URL；不支持media_id、本地文件路径和base64内容",
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id",
+        "url"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_send_group_message",
+    "description": "通过群ID向tuitui(推推)群发一条文本消息",
+    "inputSchema": {
+      "properties": {
+        "group_id": {
+          "description": "群ID",
+          "type": "string"
+        },
+        "message": {
+          "description": "消息正文",
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id",
+        "message"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_send_private_file",
+    "description": "通过账号向tuitui(推推)用户发一条文件消息",
+    "inputSchema": {
+      "properties": {
+        "account": {
+          "description": "用户账号，需要填写英文的账号名，不支持中文姓名",
+          "type": "string"
+        },
+        "filename": {
+          "description": "可选文件名；不传时由服务端取 URL 路径中的文件名",
+          "type": "string"
+        },
+        "url": {
+          "description": "可下载的HTTP(S)文件URL；不支持media_id、本地文件路径和base64内容",
+          "type": "string"
+        }
+      },
+      "required": [
+        "account",
+        "url"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_send_private_image",
+    "description": "通过账号向tuitui(推推)用户发一条图片消息",
+    "inputSchema": {
+      "properties": {
+        "account": {
+          "description": "用户账号，需要填写英文的账号名，不支持中文姓名",
+          "type": "string"
+        },
+        "url": {
+          "description": "可下载的HTTP(S)图片URL；不支持media_id、本地文件路径和base64内容",
+          "type": "string"
+        }
+      },
+      "required": [
+        "account",
+        "url"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_send_private_message",
+    "description": "通过账号向tuitui(推推)用户发一条文本消息",
+    "inputSchema": {
+      "properties": {
+        "accounts": {
+          "description": "用户账号，需要填写英文的账号名，不支持中文姓名",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "message": {
+          "description": "消息正文",
+          "type": "string"
+        }
+      },
+      "required": [
+        "accounts",
+        "message"
+      ],
+      "type": "object"
+    }
+  },
+  {
+    "name": "tuitui_send_private_strong_call",
+    "description": "通过账号向tuitui(推推)用户发一条强通知消息",
+    "inputSchema": {
+      "properties": {
+        "account": {
+          "description": "用户账号，需要填写英文的账号名，不支持中文姓名",
+          "type": "string"
+        },
+        "call_notice": {
+          "description": "若用户1分钟后未接，通过电话通知对方",
+          "type": "boolean",
+          "default": false
+        },
+        "content": {
+          "description": "强通知消息内容",
+          "type": "string"
+        },
+        "sms_notice": {
+          "description": "若用户1分钟后未接，通过短信通知对方",
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "account",
+        "content"
+      ],
+      "type": "object"
+    }
+  }
+]
