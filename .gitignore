@@ -1,0 +1,8 @@
+# Local credentials and environment overrides
+.env
+.env.*
+!.env.e2e.sample
+
+# Local build and E2E output
+bot-mcp
+bot-mcp.exe
