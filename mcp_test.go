@@ -163,6 +163,119 @@ func TestArguments(t *testing.T) {
 	}
 }
 
+func TestInvalidToolArguments(t *testing.T) {
+	var upstreamCalls atomic.Int32
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upstreamCalls.Add(1)
+		jsonResponse(w, map[string]any{"errcode": 0})
+	}))
+	defer upstream.Close()
+	var logs bytes.Buffer
+	s := httptest.NewServer(NewServer(Options{
+		Defaults:   Credentials{"1", "fixture-secret"},
+		SDKOptions: &sdk.ClientOptions{APIBaseURL: upstream.URL},
+		Logger:     slog.New(slog.NewJSONHandler(&logs, nil)),
+	}))
+	defer s.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	c, err := OpenMCP(ctx, s.URL+"/mcp", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	for _, def := range Definitions() {
+		t.Run(def.Name, func(t *testing.T) {
+			check := func(args any) {
+				t.Helper()
+				var request mcp.CallToolRequest
+				request.Params.Name = def.Name
+				request.Params.Arguments = args
+				result, err := c.CallTool(ctx, request)
+				if err != nil || result == nil || !result.IsError {
+					t.Fatalf("invalid arguments %#v: result=%+v, err=%v", args, result, err)
+				}
+			}
+			// Invalid arguments containers must also return a tool error.
+			for _, args := range []any{nil, true, 42, "invalid", []any{}, map[string]any{}} {
+				check(args)
+			}
+			for name, raw := range def.InputSchema.Properties {
+				invalid := []any{nil, map[string]any{}}
+				switch text(object(raw)["type"]) {
+				case "string":
+					invalid = append(invalid, true, 42, []any{})
+				case "array":
+					invalid = append(invalid, true, 42, "invalid", []any{nil}, []any{42}, []any{map[string]any{}})
+				case "integer":
+					invalid = append(invalid, true, "20", []any{}, 1.5, 1e100)
+				case "boolean":
+					invalid = append(invalid, "true", 42, []any{})
+				}
+				for _, value := range invalid {
+					args := map[string]any{}
+					for _, required := range def.InputSchema.Required {
+						args[required] = "fixture"
+						if text(object(def.InputSchema.Properties[required])["type"]) == "array" {
+							args[required] = []any{"fixture"}
+						}
+					}
+					args[name] = value
+					check(args)
+				}
+			}
+		})
+	}
+	if upstreamCalls.Load() != 0 {
+		t.Fatalf("invalid arguments reached upstream %d times", upstreamCalls.Load())
+	}
+	if strings.Contains(logs.String(), "mcp handler panic") {
+		t.Fatal("invalid arguments triggered panic recovery")
+	}
+}
+
+func TestMalformedMCPRequestsDoNotPanic(t *testing.T) {
+	var logs bytes.Buffer
+	s := httptest.NewServer(NewServer(Options{Logger: slog.New(slog.NewJSONHandler(&logs, nil))}))
+	defer s.Close()
+	for _, body := range []string{
+		``, `{`, `null`, `true`, `42`, `"invalid"`, `[]`, `[{}]`, `{}`,
+		`{"jsonrpc":"2.0","id":{},"method":"tools/list"}`,
+		`{"jsonrpc":"2.0","id":[],"method":"tools/list"}`,
+		`{"jsonrpc":"2.0","id":1e100,"method":"tools/list"}`,
+		`{"jsonrpc":"2.0","id":1,"method":{}}`,
+		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":[]}`,
+		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":null}`,
+		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":{}}}`,
+		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"unknown"}}`,
+		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":[]}}`,
+	} {
+		t.Run(body, func(t *testing.T) {
+			request, err := http.NewRequest(http.MethodPost, s.URL+"/mcp", strings.NewReader(body))
+			if err != nil {
+				t.Fatal(err)
+			}
+			request.Header.Set("Content-Type", "application/json")
+			request.Header.Set("Accept", "application/json, text/event-stream")
+			client := &http.Client{Timeout: 2 * time.Second}
+			response, err := client.Do(request)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer response.Body.Close()
+			if _, err := io.Copy(io.Discard, response.Body); err != nil {
+				t.Fatal(err)
+			}
+			if response.StatusCode >= 500 {
+				t.Fatalf("malformed request returned HTTP %d", response.StatusCode)
+			}
+		})
+	}
+	if strings.Contains(logs.String(), "mcp handler panic") {
+		t.Fatal("malformed request triggered panic recovery")
+	}
+}
+
 func TestSchemaDefaultsAndTypes(t *testing.T) {
 	if bytes.Contains(catalog, []byte(`"parameters"`)) {
 		t.Fatal("工具定义不应包含重复的 parameters")

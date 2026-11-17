@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -68,6 +69,41 @@ func TestToolResponsesPassThrough(t *testing.T) {
 		}
 	}
 }
+func TestUnexpectedUpstreamResponsesDoNotPanic(t *testing.T) {
+	for _, response := range []string{
+		``, `null`, `[]`, `"invalid"`, `<html>bad gateway</html>`, `{`,
+		`{"errcode":null}`, `{"errcode":{}}`, `{"errcode":1,"errmsg":[]}`,
+		`{"errcode":0,"datas":null}`,
+		`{"errcode":0,"datas":{"info":[]}}`,
+		`{"errcode":0,"datas":{"info":{"team_id":{}}},"msgs":[null],"msgids":true}`,
+	} {
+		t.Run(response, func(t *testing.T) {
+			tools := fixtureTools(t, func(w http.ResponseWriter, r *http.Request) {
+				io.WriteString(w, response)
+			})
+			for _, def := range Definitions() {
+				t.Run(def.Name, func(t *testing.T) {
+					args := map[string]any{
+						"accounts": []any{"test-user"}, "account": "test-user", "message": "test",
+						"channel_id": "2", "msgid": "4", "markdown": "test", "content": "test",
+						"team_id": "3", "group_id": "5", "name": "test", "owner": "test-user",
+						"members": []any{"test-user"}, "keyword": "test", "relative_time": "today",
+						"url": "https://example.com/file.txt", "filename": "test.txt",
+					}
+					value, err := tools.Execute(context.Background(), def.Name, args)
+					if err != nil {
+						if errorReason(err) == "" {
+							t.Fatal("missing error reason")
+						}
+					} else if _, err := json.Marshal(value); err != nil {
+						t.Fatal(err)
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestHistoryRequestParameters(t *testing.T) {
 	for _, tc := range []struct {
 		name string
