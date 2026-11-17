@@ -1,6 +1,6 @@
 # bot-mcp
 
-推推 MCP 服务。把推推 Bot 能力封装为 MCP，基于推推 Bot SDK 开发。
+推推 MCP 服务。基于推推 Bot SDK 开发，把推推 Bot 能力封装为 MCP。
 
 ## 编译与发布
 
